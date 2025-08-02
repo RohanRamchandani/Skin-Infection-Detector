@@ -8,7 +8,7 @@ import numpy as np
 
 # Paths
 
-DATA_DIR = r'C:\Users\mahme\OneDrive\Documents\GitHub\Skin-Infection-Detector\dataset\balanced_resized_dataset' # Directory containing images
+DATA_DIR = r'dataset\balanced_resized_dataset' # Directory containing images
 IMG_SIZE = (224, 224)  # Size to which images will be resized
 BATCH_SIZE = 32
 EPOCHS = 10 # Number of epochs for training
@@ -69,11 +69,17 @@ from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
 early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
+checkpoint = ModelCheckpoint(
+    'best_skin_detector.keras',  # Save to file
+    monitor='val_loss',
+    save_best_only=True,
+    verbose=1
+)
 history = model.fit(
     train_generator,
     epochs=EPOCHS,
     validation_data=validation_generator,
-    callbacks=[early_stop]
+    callbacks=[checkpoint,early_stop]
 )
 
 
