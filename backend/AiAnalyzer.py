@@ -4,7 +4,9 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
+from dotenv import load_dotenv
 
+load_dotenv()
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,38 +23,53 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-def get_skin_disease_recommendations(skin_disease):
+
+def get_skin_disease_recommendations(skin_disease, allergies):
     """
-    Simple function to prompt Gemini AI for skin disease recommendations
+    Simple function to prompt Gemini AI for skin disease recommendations based on severity and allergies
     """
     
     # Create a simple, focused prompt
+    allergy_info = (
+        f"\nThe user has the following allergies: {', '.join(allergies)}.\n"
+        "Please avoid recommending any supplements or foods that may trigger these allergies."
+
+        if allergies else ""
+    )
+
     prompt = f"""
-    Please provide supplement and healthy food recommendations for {skin_disease}.
-    
-    Format your response as JSON with this structure:
-    {{
-        "condition": "{skin_disease}",
-        "supplements": [
-            {{
-                "name": "supplement name",
-                "benefit": "how it helps with {skin_disease}",
-                "dosage": "recommended daily amount"
-            }}
-        ],
-        "healthy_foods": [
-            {{
-                "name": "food name", 
-                "benefit": "how it helps with {skin_disease}",
-                "nutrients": "key nutrients that help"
-            }}
-        ],
-        "foods_to_avoid": [
-            "food that may worsen {skin_disease}"
-        ]
-    }}
-    
-    Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
+        You are a licensed medical nutritionist and dermatologist.  
+        Only provide supplement and healthy food recommendations for **medically known and evidence-based** treatments for **{skin_disease}** and allergies: {allergies}.  
+
+        ${allergy_info}
+
+        Use only well-known, established medical sources.  
+        You have to be sure and accurate with what you are giving us.   
+        Do not add any disclaimers or explanations outside the JSON — only the JSON.
+        
+        Format your response as JSON with this structure:
+        {{
+            "condition": "{skin_disease}",
+            "supplements": [
+                {{
+                    "name": "supplement name",
+                    "benefit": "how it helps with {skin_disease} and/or {allergies}",
+                    "dosage": "recommended daily amount"
+                }}
+            ],
+            "healthy_foods": [
+                {{
+                    "name": "food name", 
+                    "benefit": "how it helps with {skin_disease} and/or {allergies}",
+                    "nutrients": "key nutrients that help"
+                }}
+            ],
+            "foods_to_avoid": [
+                "food that may worsen {skin_disease} and/or {allergies}"
+            ]
+        }}
+        
+        Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
     """
     
     try:
@@ -69,9 +86,6 @@ def get_skin_disease_recommendations(skin_disease):
         # Parse JSON response
         recommendations = json.loads(response_text)
         
-        # Add disclaimer
-        recommendations['disclaimer'] = "This is for educational purposes only. Consult a healthcare professional before starting any supplements."
-        
         return recommendations
         
     except json.JSONDecodeError as e:
@@ -80,48 +94,3 @@ def get_skin_disease_recommendations(skin_disease):
     except Exception as e:
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
-
-@app.route('/')
-def home():
-    return jsonify({
-        'message': 'Simple Skin Disease Recommendation API',
-        'usage': 'POST to /recommend with {"skin_disease": "condition_name"}'
-    })
-
-@app.route('/recommend', methods=['POST'])
-def recommend():
-    """
-    Main endpoint - just send skin disease name and get recommendations
-    """
-    try:
-        data = request.get_json()
-        
-        # Check if skin_disease is provided
-        if not data or 'skin_disease' not in data:
-            return jsonify({'error': 'Please provide skin_disease in request body'}), 400
-        
-        skin_disease = data['skin_disease'].strip()
-        
-        if not skin_disease:
-            return jsonify({'error': 'skin_disease cannot be empty'}), 400
-        
-        # Get recommendations from Gemini
-        logger.info(f"Getting recommendations for: {skin_disease}")
-        recommendations = get_skin_disease_recommendations(skin_disease)
-        
-        return jsonify(recommendations)
-        
-    except Exception as e:
-        logger.error(f"Error in recommend endpoint: {e}")
-        return jsonify({'error': 'Internal server error'}), 500
-
-@app.route('/health')
-def health():
-    """Simple health check"""
-    return jsonify({'status': 'API is running'})
-
-if __name__ == '__main__':
-    print("Starting Simple Skin Disease Recommendation API...")
-    print("Make sure to set GEMINI_API_KEY environment variable")
-    print("Usage: POST to /recommend with {'skin_disease': 'acne'}")
-    app.run(debug=True, host='0.0.0.0', port=5000)
