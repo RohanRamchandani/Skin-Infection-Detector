@@ -11,7 +11,7 @@ import numpy as np
 DATA_DIR = r'C:\Users\mahme\OneDrive\Documents\GitHub\Skin-Infection-Detector\dataset\balanced_resized_dataset' # Directory containing images
 IMG_SIZE = (224, 224)  # Size to which images will be resized
 BATCH_SIZE = 32
-EPOCHS = 30 # Number of epochs for training
+EPOCHS = 10 # Number of epochs for training
 LR = 1e-4  # Learning rate
 Unfreezing_Layers = 100 # Number of layers to unfreeze in the base model
 
@@ -32,7 +32,7 @@ train_generator = train_datagen.flow_from_directory(
     target_size=IMG_SIZE,
     batch_size=BATCH_SIZE,
     class_mode='categorical',
-    subset='training'
+    subset='training',
     shuffle=True
 )
 
@@ -41,7 +41,7 @@ validation_generator = train_datagen.flow_from_directory(
     target_size=IMG_SIZE,
     batch_size=BATCH_SIZE,
     class_mode='categorical',
-    subset='validation'
+    subset='validation',
     shuffle=False
 )
 
@@ -84,5 +84,16 @@ predictions = model.predict(validation_generator)
 y_pred = np.argmax(predictions, axis=1)
 y_true = validation_generator.classes
 class_labels = list(validation_generator.class_indices.keys())
-print(classification_report(y_true, y_pred, target_names=class_labels.keys()))
+print(classification_report(y_true, y_pred, target_names=list(class_labels)))
 
+
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
+
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+history = model.fit(
+    train_generator,
+    epochs=EPOCHS,
+    validation_data=validation_generator,
+    callbacks=[early_stop]
+)
