@@ -1,7 +1,8 @@
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications import EfficientNetB4
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping , ReduceLROnPlateau
 from tensorflow.keras import layers, models
 from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
@@ -11,7 +12,7 @@ import numpy as np
 DATA_DIR = r'dataset\balanced_resized_dataset' # Directory containing images
 IMG_SIZE = (224, 224)  # Size to which images will be resized
 BATCH_SIZE = 32
-EPOCHS = 10 # Number of epochs for training
+EPOCHS = 50 # Number of epochs for training
 LR = 1e-4  # Learning rate
 Unfreezing_Layers = 100 # Number of layers to unfreeze in the base model
 
@@ -46,7 +47,7 @@ validation_generator = train_datagen.flow_from_directory(
 )
 
 # 2. Build Model
-base_model = MobileNetV2(input_shape= (224,224,3), include_top=False, weights='imagenet')
+base_model = EfficientNetB4(input_shape= (224,224,3), include_top=False, weights='imagenet')
 base_model.trainable = True  # Set the base model to be trainable
 
 
@@ -62,15 +63,14 @@ model = models.Sequential([
     layers.Dense(train_generator.num_classes, activation='softmax'),
 ])
 
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=LR),
                 loss='categorical_crossentropy',
                 metrics=['accuracy'])
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
+early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True, verbose=1)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-6, verbose=1)
 checkpoint = ModelCheckpoint(
-    'best_skin_detector.keras',  # Save to file
+    'best_efficientnet_skin_model.keras',  # Save to file
     monitor='val_loss',
     save_best_only=True,
     verbose=1
@@ -79,13 +79,10 @@ history = model.fit(
     train_generator,
     epochs=EPOCHS,
     validation_data=validation_generator,
-    callbacks=[checkpoint,early_stop]
+    callbacks=[early_stop, reduce_lr, checkpoint]
 )
 
 
-# Save the model
-model.save('skin_infection_detector_model.keras')
-print("Model saved as 'skin_infection_detector_model.keras'")
 
 # 4. Evaluate Model
 
