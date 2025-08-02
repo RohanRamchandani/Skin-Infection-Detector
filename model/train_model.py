@@ -65,13 +65,17 @@ model = models.Sequential([
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
                 loss='categorical_crossentropy',
                 metrics=['accuracy'])
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 
-# 3. Train Model
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
 history = model.fit(
     train_generator,
     epochs=EPOCHS,
-    validation_data=validation_generator
+    validation_data=validation_generator,
+    callbacks=[early_stop]
 )
+
 
 # Save the model
 model.save('skin_infection_detector_model.keras')
@@ -87,13 +91,3 @@ class_labels = list(validation_generator.class_indices.keys())
 print(classification_report(y_true, y_pred, target_names=list(class_labels)))
 
 
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
-
-early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
-history = model.fit(
-    train_generator,
-    epochs=EPOCHS,
-    validation_data=validation_generator,
-    callbacks=[early_stop]
-)
