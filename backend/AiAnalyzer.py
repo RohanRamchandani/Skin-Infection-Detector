@@ -2,13 +2,12 @@ import google.generativeai as genai
 import json
 import os
 import logging
-import re
+from dotenv import load_dotenv
 
+load_dotenv()
+# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-from dotenv import load_dotenv
-load_dotenv()
 
 # Configuration - Set your Gemini API key as environment variable
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -21,17 +20,25 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 
 def get_skin_disease_recommendations(skin_disease, allergies):
     """
-    Simple function to prompt Gemini AI for skin disease recommendations
+    Simple function to prompt Gemini AI for skin disease recommendations based on severity and allergies
     """
     
     # Create a simple, focused prompt
-    if allergies and allergies.lower() != 'None':
-        prompt = f"""
+    allergy_info = (
+        f"\nThe user has the following allergies: {', '.join(allergies)}.\n"
+        "Please avoid recommending any supplements or foods that may trigger these allergies."
+
+        if allergies else ""
+    )
+
+    prompt = f"""
         You are a licensed medical nutritionist and dermatologist.  
         Only provide supplement and healthy food recommendations for **medically known and evidence-based** treatments for **{skin_disease}** and allergies: {allergies}.  
 
+        ${allergy_info}
+
         Use only well-known, established medical sources.  
-        If you are unsure about any part, say "I don't know" — **do not guess**.  
+        You have to be sure and accurate with what you are giving us.   
         Do not add any disclaimers or explanations outside the JSON — only the JSON.
         
         Format your response as JSON with this structure:
@@ -57,40 +64,7 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         }}
         
         Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
-        """
-    else:
-        prompt = f"""
-        You are a licensed medical nutritionist and dermatologist.  
-        Only provide supplement and healthy food recommendations for **medically known and evidence-based** treatments for **{skin_disease}** .  
-
-        Use only well-known, established medical sources.  
-        If you are unsure about any part, say "I don't know" — **do not guess**.  
-        Do not add any disclaimers or explanations outside the JSON — only the JSON.
-        
-        Format your response as JSON with this structure:
-        {{
-            "condition": "{skin_disease}",
-            "supplements": [
-                {{
-                    "name": "supplement name",
-                    "benefit": "how it helps with {skin_disease}",
-                    "dosage": "recommended daily amount"
-                }}
-            ],
-            "healthy_foods": [
-                {{
-                    "name": "food name", 
-                    "benefit": "how it helps with {skin_disease}",
-                    "nutrients": "key nutrients that help"
-                }}
-            ],
-            "foods_to_avoid": [
-                "food that may worsen {skin_disease}"
-            ]
-        }}
-        
-        Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
-        """
+    """
     
     try:
         # Send prompt to Gemini
@@ -103,18 +77,8 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         if response_text.endswith('```'):
             response_text = response_text[:-3]
         
-        match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if match:
-            response_text = match.group(0)
-        else:
-            logger.error("No JSON found in response")
-            return {"error": "No valid JSON found in AI response"}
-        
         # Parse JSON response
         recommendations = json.loads(response_text)
-        
-        # Add disclaimer
-        recommendations['disclaimer'] = "This is for educational purposes only. Consult a healthcare professional before starting any supplements."
         
         return recommendations
         
