@@ -3,7 +3,7 @@ from flask_cors import CORS
 import logging
 from AiAnalyzer import get_skin_disease_recommendations
 
-print(get_skin_disease_recommendations("acne", "pollen"))
+print(get_skin_disease_recommendations("eczema", "None"))
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,11 +27,11 @@ def recommend():
         data = request.get_json()
         
         # Check if skin_disease is provided
-        if not data or 'skin_disease' or 'allergies' not in data:
+        if not data or 'skin_disease'not in data or 'allergies' not in data:
             return jsonify({'error': 'Please provide skin_disease and/or allergies in request body'}), 400
         
         skin_disease = data['skin_disease'].strip()
-        allergies = data['allegies'].strip()
+        allergies = data['allergies'].strip()
         
         if not skin_disease :
             return jsonify({'error': 'skin_disease cannot be empty'}), 400

@@ -25,33 +25,72 @@ def get_skin_disease_recommendations(skin_disease, allergies):
     """
     
     # Create a simple, focused prompt
-    prompt = f"""
-    Please provide supplement and healthy food recommendations for {skin_disease} and {allergies}.
-    
-    Format your response as JSON with this structure:
-    {{
-        "condition": "{skin_disease}",
-        "supplements": [
-            {{
-                "name": "supplement name",
-                "benefit": "how it helps with {skin_disease} and/or {allergies}",
-                "dosage": "recommended daily amount"
-            }}
-        ],
-        "healthy_foods": [
-            {{
-                "name": "food name", 
-                "benefit": "how it helps with {skin_disease} and/or {allergies}",
-                "nutrients": "key nutrients that help"
-            }}
-        ],
-        "foods_to_avoid": [
-            "food that may worsen {skin_disease} and/or {allergies}"
-        ]
-    }}
-    
-    Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
-    """
+    if allergies and allergies.lower() != 'None':
+        prompt = f"""
+        You are a licensed medical nutritionist and dermatologist.  
+        Only provide supplement and healthy food recommendations for **medically known and evidence-based** treatments for **{skin_disease}** and allergies: {allergies}.  
+
+        Use only well-known, established medical sources.  
+        If you are unsure about any part, say "I don't know" — **do not guess**.  
+        Do not add any disclaimers or explanations outside the JSON — only the JSON.
+        
+        Format your response as JSON with this structure:
+        {{
+            "condition": "{skin_disease}",
+            "supplements": [
+                {{
+                    "name": "supplement name",
+                    "benefit": "how it helps with {skin_disease} and/or {allergies}",
+                    "dosage": "recommended daily amount"
+                }}
+            ],
+            "healthy_foods": [
+                {{
+                    "name": "food name", 
+                    "benefit": "how it helps with {skin_disease} and/or {allergies}",
+                    "nutrients": "key nutrients that help"
+                }}
+            ],
+            "foods_to_avoid": [
+                "food that may worsen {skin_disease} and/or {allergies}"
+            ]
+        }}
+        
+        Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
+        """
+    else:
+        prompt = f"""
+        You are a licensed medical nutritionist and dermatologist.  
+        Only provide supplement and healthy food recommendations for **medically known and evidence-based** treatments for **{skin_disease}** .  
+
+        Use only well-known, established medical sources.  
+        If you are unsure about any part, say "I don't know" — **do not guess**.  
+        Do not add any disclaimers or explanations outside the JSON — only the JSON.
+        
+        Format your response as JSON with this structure:
+        {{
+            "condition": "{skin_disease}",
+            "supplements": [
+                {{
+                    "name": "supplement name",
+                    "benefit": "how it helps with {skin_disease}",
+                    "dosage": "recommended daily amount"
+                }}
+            ],
+            "healthy_foods": [
+                {{
+                    "name": "food name", 
+                    "benefit": "how it helps with {skin_disease}",
+                    "nutrients": "key nutrients that help"
+                }}
+            ],
+            "foods_to_avoid": [
+                "food that may worsen {skin_disease}"
+            ]
+        }}
+        
+        Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
+        """
     
     try:
         # Send prompt to Gemini
