@@ -37,3 +37,4 @@ desktop.ini
 *.tmp
 *.old
 *.orig
+backend/.env
