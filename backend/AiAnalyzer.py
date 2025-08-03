@@ -80,7 +80,7 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         return {"error": str(e)}
 
 
-@app.route('http://4.157.173.143:8000/recommend', methods=['POST'])
+@app.route('/recommend', methods=['POST'])
 def recommendations():
     data = request.get_json()
     skin_disease = data.get('skin_disease')
