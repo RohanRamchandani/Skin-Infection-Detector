@@ -1,13 +1,20 @@
-import React from 'react'; // Removed useState, useEffect as they are not needed for static mock data
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+// Define your backend URL in one place for easy updates.
+const API_BASE_URL = 'http://4.157.173.143:8000'; // Ensure this is correct
+
 export default function ResultsScreen() {
-  const { result } = useLocalSearchParams();
+  const { result, allergies } = useLocalSearchParams(); // Get result and allergies from navigation params
   const router = useRouter();
 
-  // Safely parse the initial image analysis result (still useful for displaying detected condition)
+  const [recommendationData, setRecommendationData] = useState(null);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationError, setRecommendationError] = useState(null);
+
+  // Safely parse the initial image analysis result to get skinCondition
   let parsedImageAnalysisResult = null;
   if (typeof result === 'string') {
     try {
@@ -24,77 +31,55 @@ export default function ResultsScreen() {
   }
 
   // Extract skin condition from the image analysis result
+  // This will be the dynamic skin disease used for AI prompting
   const skinConditionFromImage = parsedImageAnalysisResult?.skinCondition || 'Unknown';
 
-  // Mock data for demonstration
-  const recommendationData = {
-    condition: skinConditionFromImage, // Use the detected condition for the mock data's condition
-    foods_to_avoid: [
-      "Highly processed foods",
-      "Foods high in saturated and trans fats",
-      "Foods high in sugar",
-      "Common allergens like dairy, gluten, soy (if applicable to a specific condition)",
-      "Spicy foods (can trigger redness in some conditions)",
-    ],
-    healthy_foods: [
-      {
-        name: "Fatty Fish (salmon, mackerel, tuna)",
-        benefit: "Excellent source of omega-3 fatty acids, which have anti-inflammatory effects beneficial for skin health.",
-        nutrients: "Omega-3 fatty acids (EPA and DHA), Vitamin D"
-      },
-      {
-        name: "Avocados",
-        benefit: "Rich in healthy fats and antioxidants that contribute to skin hydration and overall health.",
-        nutrients: "Monounsaturated fats, Vitamin E, antioxidants"
-      },
-      {
-        name: "Berries (blueberries, strawberries)",
-        benefit: "Packed with antioxidants that protect skin cells from damage.",
-        nutrients: "Vitamin C, various antioxidants"
-      },
-      {
-        name: "Leafy Greens (spinach, kale)",
-        benefit: "Good source of vitamins, minerals, and antioxidants essential for skin repair and protection.",
-        nutrients: "Vitamins A, C, K, folate, iron"
-      },
-      {
-        name: "Nuts & Seeds (almonds, chia seeds)",
-        benefit: "Provide healthy fats, zinc, and selenium which are crucial for skin integrity and healing.",
-        nutrients: "Omega-3s, Zinc, Selenium, Vitamin E"
-      },
-      {
-        name: "Sweet Potatoes",
-        benefit: "Good source of beta-carotene, a precursor to vitamin A, essential for skin health and barrier function.",
-        nutrients: "Beta-carotene (Vitamin A precursor), Vitamin C"
-      },
-    ],
-    supplements: [
-      {
-        name: "Omega-3 Fatty Acids (EPA and DHA)",
-        benefit: "Reduces inflammation, which is a common factor in many skin conditions. May improve skin barrier function.",
-        dosage: "Consult a doctor for appropriate dosage, typically 1-4g daily."
-      },
-      {
-        name: "Vitamin D",
-        benefit: "Plays a role in immune regulation and skin health. Deficiency is linked to increased severity of certain skin conditions.",
-        dosage: "Consult a doctor for appropriate dosage based on individual needs and blood levels."
-      },
-      {
-        name: "Probiotics",
-        benefit: "May modulate the gut microbiome, potentially influencing immune responses and reducing inflammation linked to skin issues.",
-        dosage: "Consult a doctor for appropriate dosage and strain selection."
-      },
-      {
-        name: "Zinc",
-        benefit: "Crucial for skin repair and immune function. May help reduce inflammation and promote healing.",
-        dosage: "Consult a doctor for appropriate dosage, typical daily amounts for adults range from 11-15 mg."
-      },
-    ]
+  // Parse allergies from the navigation parameter
+  const parsedAllergies = allergies
+    ? (typeof allergies === 'string' ? allergies.split(',').map(a => a.trim()).filter(a => a) : [])
+    : [];
+
+  // Function to fetch recommendations from the backend
+  const fetchRecommendations = async () => {
+    setIsLoadingRecommendations(true);
+    setRecommendationError(null);
+    setRecommendationData(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/recommend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          skin_disease: skinConditionFromImage, // Using the dynamically extracted skin condition
+          allergies: parsedAllergies,           // Using the user-provided allergies
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get recommendations: ${errorText}`);
+      }
+
+      const data = await response.json();
+      setRecommendationData(data);
+    } catch (e) {
+      console.error('Error fetching recommendations:', e);
+      setRecommendationError(e.message || 'An error occurred while fetching recommendations.');
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
   };
 
-  // No loading or error states needed as data is static
-  const isLoadingRecommendations = false;
-  const recommendationError = null;
+  // Automatically fetch recommendations when the component mounts or skinConditionFromImage/allergies change
+  useEffect(() => {
+    // Only fetch if not already loading and no data is present, and we have a skin condition
+    if (skinConditionFromImage && !recommendationData && !isLoadingRecommendations) {
+      fetchRecommendations();
+    }
+  }, [skinConditionFromImage, allergies]); // Re-run fetch if skin condition or allergies change
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -106,29 +91,28 @@ export default function ResultsScreen() {
         <Text style={styles.backText}>Back to Upload</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Skin Analysis & Recommendations</Text>
+      <Text style={styles.title}>Skin Recommendations</Text>
 
-      {/* Initial Skin Condition Summary from Image Analysis */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Image Analysis Summary</Text>
-        <Text style={styles.summaryText}>
-          <Text style={styles.boldText}>Detected Condition:</Text> {skinConditionFromImage}
+      {/* Tab-like display for dynamically detected skin disease and user-provided allergies */}
+      <View style={styles.infoTab}>
+        <Text style={styles.infoTabText}>
+          <Text style={styles.boldText}>Condition:</Text> {skinConditionFromImage}
         </Text>
-        <Text style={styles.summaryText}>
-          <Text style={styles.boldText}>Severity:</Text> {parsedImageAnalysisResult?.severity || 'N/A'}
+        <Text style={styles.infoTabText}>
+          <Text style={styles.boldText}>Allergies:</Text> {parsedAllergies.length > 0 ? parsedAllergies.join(', ') : 'None'}
         </Text>
       </View>
 
-      {/* AI-Prompted Recommendations (now using mock data) */}
+      {/* AI-Prompted Recommendations */}
       {recommendationError ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{recommendationError}</Text>
           <Text style={styles.errorText}>Please try again or check your backend connection.</Text>
         </View>
-      ) : (
+      ) : recommendationData ? (
         <>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Diet & Supplement Recommendations for {recommendationData.condition}</Text>
+            <Text style={styles.cardTitle}>Diet & Supplement Recommendations for {recommendationData.condition || skinConditionFromImage}</Text>
           </View>
 
           {/* Healthy Foods Section */}
@@ -175,13 +159,16 @@ export default function ResultsScreen() {
             )}
           </View>
         </>
-      )}
-
-      {/* Display raw initial analysis result for debugging (optional) */}
-      {parsedImageAnalysisResult && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Raw Image Analysis Data (for debugging)</Text>
-          <Text style={styles.rawResultText}>{JSON.stringify(parsedImageAnalysisResult, null, 2)}</Text>
+      ) : (
+        <View style={styles.loadingContainer}>
+          {isLoadingRecommendations ? (
+            <>
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text style={styles.loadingText}>Fetching recommendations...</Text>
+            </>
+          ) : (
+            <Text style={styles.noDataText}>No recommendations available. Please ensure an image was analyzed and a skin condition was detected.</Text>
+          )}
         </View>
       )}
     </ScrollView>
@@ -211,6 +198,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0f172a',
     marginBottom: 24,
+    textAlign: 'center',
+  },
+  infoTab: {
+    backgroundColor: '#e0f2fe',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#90cdf4',
+    alignItems: 'center',
+  },
+  infoTabText: {
+    fontSize: 16,
+    color: '#1e40af',
+    marginBottom: 5,
     textAlign: 'center',
   },
   card: {
@@ -298,18 +300,19 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: '#fee2e2', // Light red background
+    backgroundColor: '#fee2e2',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ef4444', // Red border
+    borderColor: '#ef4444',
     alignItems: 'center',
     justifyContent: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#dc2626', // Darker red text
+    color: '#dc2626',
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 5,
   },
 });
+import { Stack } from 'expo-router';

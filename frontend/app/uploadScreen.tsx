@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,15 +15,13 @@ import { useRouter } from 'expo-router';
 import { NavigationProp } from '@react-navigation/native';
 
 // Define your backend URL in one place for easy updates.
-// Replace with your computer's IP or 10.0.2.2 for Android emulator.
-const API_BASE_URL = 'http://10.17.145.120:5000';
+const API_BASE_URL = 'http://4.157.173.143:8000'; // Ensure this is correct
 
 const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [image, setImage] = useState<string | null>(null);
-  // State to manage the analysis process UI
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  // Removed analysisResult state as it will be passed to resultsScreen
   const [error, setError] = useState<string | null>(null);
+  const [allergyInput, setAllergyInput] = useState('');
   const router = useRouter();
 
   const pickImage = async () => {
@@ -35,7 +34,6 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImage(result.assets[0].uri);
-      // Clear previous error when a new image is selected
       setError(null);
     }
   };
@@ -49,13 +47,11 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImage(result.assets[0].uri);
-      // Clear previous error when a new image is selected
       setError(null);
     }
   };
 
   const uploadImage = async (imageUri: string) => {
-    // This function now only handles the initial upload.
     try {
       const filename = imageUri.split('/').pop() || `image-${Date.now()}.jpg`;
       const formData = new FormData();
@@ -65,6 +61,9 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         type: 'image/jpeg',
       } as any);
 
+      // Use API_BASE_URL for consistency, assuming the /upload endpoint is on the same base.
+      // If your upload endpoint is truly on a different base URL (e.g., 4.157.173.143),
+      // you should define that as a separate constant.
       const response = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
@@ -76,76 +75,72 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         throw new Error(`Upload failed: ${errorText}`);
       }
 
-      // The backend now returns a task_id
       return await response.json();
     } catch (e) {
       console.error('Upload error:', e);
-      throw e; // Re-throw to be caught by the main handler
+      throw e;
     }
   };
 
-  // New function to poll for the analysis result
-  const pollForResult = async (taskId: string) => {
-    const MAX_ATTEMPTS = 30; // Poll for a maximum of 1 minute (20 * 3s)
-    const POLL_INTERVAL = 3000; // 3 seconds
+  // Modified to use statusUrl instead of taskId
+const getResultAfterDelay = async (statusUrl: string) => {
+  const WAIT_TIME_MS = 10000; // 10 seconds
 
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL)); // Wait
+  await new Promise(resolve => setTimeout(resolve, WAIT_TIME_MS));
 
-        const response = await fetch(`${API_BASE_URL}/result/${taskId}`);
-        const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE_URL}${statusUrl}`);
+    const data = await response.json();
 
-        if (data.status === 'completed') {
-          console.log('Analysis complete:', data.prediction);
-          return data.prediction; // Success! Return the result.
-        } else if (data.status === 'failed') {
-          throw new Error(data.error || 'Analysis failed on the server.');
-        }
-        // If status is 'processing' or 'not_found', the loop will continue.
-        console.log(`Attempt ${i + 1}: Status is '${data.status}'. Polling again...`);
-      } catch (e) {
-        console.error('Polling error:', e);
-        throw e;
-      }
+    if (data.status === 'completed') {
+      console.log('Analysis complete:', data.prediction);
+      return data.prediction;
+    } else if (data.status === 'failed') {
+      throw new Error(data.error || 'Analysis failed on the server.');
+    } else {
+      throw new Error(`Task status: ${data.status}. Try again later.`);
+    }
+  } catch (e) {
+    console.error('GET result error:', e);
+    throw e;
+  }
+};
+
+
+const handleAnalyzePress = async () => {
+  if (!image) {
+    setError('Please select an image first.');
+    return;
+  }
+
+  setIsAnalyzing(true);
+  setError(null);
+
+  try {
+    // 1️⃣ Upload the image
+    const uploadResponse = await uploadImage(image);
+
+    if (!uploadResponse.success || !uploadResponse.status_url) {
+      throw new Error('Backend did not return a valid status URL.');
     }
 
-    throw new Error('Analysis timed out. Please try again.');
-  };
+    console.log(`Upload successful. Status URL: ${uploadResponse.status_url}`);
 
-  // New main handler to orchestrate the upload and polling flow
-  const handleAnalyzePress = async () => {
-    if (!image) {
-      setError('Please select an image first.');
-      return;
-    }
+    // 2️⃣ Wait & then GET the result
+    const result = await getResultAfterDelay(uploadResponse.status_url);
+    console.log('Analysis result:', JSON.stringify(result));
+    // ✅ Navigate to results screen
+    router.push({
+      pathname: 'resultsScreen',
+      params: { result: JSON.stringify(result) },
+    });
 
-    setIsAnalyzing(true);
-    setError(null);
-
-    try {
-      // Step 1: Upload the image to get a task ID
-      const uploadResponse = await uploadImage(image);
-      if (!uploadResponse.success || !uploadResponse.task_id) {
-        throw new Error('Backend did not return a valid task ID.');
-      }
-
-      console.log(`Upload successful. Task ID: ${uploadResponse.task_id}`);
-
-      // Step 2: Poll for the result using the task ID
-      const result = await pollForResult(uploadResponse.task_id);
-      router.push({
-        pathname: '/resultsScreen',
-        params: {result: JSON.stringify(result)},
-      });
-    } catch (e: any) {
-      setError(e.message || 'An unknown error occurred.');
-    } finally {
-      setIsAnalyzing(false); // Stop the loading indicator
-    }
-  };
-
-
+  } catch (e: any) {
+    setError(e.message || 'An unknown error occurred.');
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
   return (
     <ScrollView>
       <View style={styles.container}>
@@ -202,6 +197,19 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
           </View>
         </View>
 
+        {/* Allergy Input Section */}
+        <View style={styles.allergyInputContainer}>
+          <Text style={styles.allergyInputLabel}>Enter any known allergies (comma-separated):</Text>
+          <TextInput
+            style={styles.allergyTextInput}
+            value={allergyInput}
+            onChangeText={setAllergyInput}
+            placeholder="e.g., peanuts, dairy, gluten"
+            placeholderTextColor="#94a3b8"
+            autoCapitalize="none"
+          />
+        </View>
+
         <View style={styles.guidelines}>
           <Text style={styles.guidelinesTitle}>Important Guidelines:</Text>
           <View style={styles.guidelineItem}>
@@ -228,7 +236,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
           </View>
         </View>
 
-        {/* <TouchableOpacity
+        <TouchableOpacity
           onPress={handleAnalyzePress}
           style={[styles.analyzeButton, isAnalyzing && styles.disabledButton]}
           disabled={isAnalyzing}
@@ -238,13 +246,10 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
               <ActivityIndicator size="small" color="#38bdf8" />
               <Text style={styles.analyzeButtonText}>Analyzing...</Text>
             </>
-          ) : ( */}
-          <TouchableOpacity 
-          onPress={() => router.push('/resultsScreen')}
-          style={[styles.analyzeButton, isAnalyzing && styles.disabledButton]}><Text style={styles.analyzeButtonText}>Analyze Image</Text></TouchableOpacity>
-            
-        {/* //   )} */}
-        {/* // </TouchableOpacity> */}
+          ) : (
+            <Text style={styles.analyzeButtonText}>Analyze Image</Text>
+          )}
+        </TouchableOpacity>
 
         {error && (
           <View style={styles.resultBox}>
@@ -344,6 +349,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
+  allergyInputContainer: {
+    width: '100%',
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  allergyInputLabel: {
+    fontSize: 16,
+    color: '#334155',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  allergyTextInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#1e293b',
+    backgroundColor: '#fefefe',
+  },
   guidelines: {
     backgroundColor: '#e0f2fe',
     borderRadius: 12,
@@ -402,17 +427,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-  },
-  resultTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0f172a',
-    marginBottom: 8,
-  },
-  resultText: {
-    fontSize: 14,
-    color: '#334155',
-    fontFamily: 'monospace',
   },
   errorText: {
     fontSize: 14,
