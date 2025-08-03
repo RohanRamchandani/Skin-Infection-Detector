@@ -11,7 +11,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsEditing: true,  
       aspect: [4, 3],
       quality: 1,
     });
@@ -32,6 +32,38 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       setImage(result.assets[0].uri);
     }
   };
+
+   const uploadImage = async (image) => {
+    let filename = image.split('/').pop();
+    let match = /\.(\w+)$/.exec(filename);
+    let type = match ? `image/${match[1]}` : `image/jpeg`;
+
+    if(!match){
+      filename = `$(filename).jpg`;
+    }
+    let formData = new FormData();
+    formData.append('image', {
+      uri: image,
+      name: filename,
+      type: type,
+    } as any);
+
+      try {
+      const response = await fetch('http://10.17.145.120:5000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      console.log('Status code:', response.status);
+      const data = await response.json();
+      
+
+  
+      console.log(data);
+      return data;
+    } catch (error) {
+      console.error(error);
+    }
+};
 
   return (
     <ScrollView>
@@ -110,7 +142,17 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.analyzeButton}>
+      <TouchableOpacity onPress={async () => {
+        if (image) {
+          const result = await uploadImage(image);
+          console.log('Backend response:', result);
+          // Optionally navigate:
+
+        } else {
+          // Optionally show a message to select an image first
+          console.log('Please select an image before analyzing.');
+        }
+      }} style={styles.analyzeButton}>
         <Text style={styles.analyzeButtonText}>Analyze Image</Text>
       </TouchableOpacity>
     </View>

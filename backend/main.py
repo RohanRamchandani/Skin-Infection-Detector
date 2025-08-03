@@ -1,21 +1,29 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
-from AiAnalyzer import get_skin_disease_recommendations
+import os
+import tempfile
 
-print(get_skin_disease_recommendations("eczema", "None"))
-print(get_skin_disease_recommendations("Eczema", "none"))
+from AiAnalyzer import get_skin_disease_recommendations
+from prediction import predict_image
+
+app = Flask(__name__)
+CORS(app, resources={
+    r"/upload": {"origins": "*"},
+    r"/recommend": {"origins": "*"}
+})
+
+UPLOAD_FOLDER = './uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-CORS(app)
-
 @app.route('/')
 def home():
     return jsonify({
-        'message': 'Skin Disease Recommendation API',
+        'message': 'Test : Skin Disease Recommendation API',
         'usage': 'POST to /recommend with {"skin_disease": "condition_name"}'
     })
 
@@ -59,6 +67,35 @@ def recommend():
         logger.error(f"Error in recommend endpoint: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/upload', methods=['POST'])
+def upload_image():
+    try:
+        if 'image' not in request.files:
+            logger.error('No image in request.files: %s', request.files.keys())
+            return jsonify({'error': 'No image uploaded'}), 409
+    except Exception as e:
+        logger.exception("Full upload error:")
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    # Simple check
+    allowed_extensions = ('.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG')
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+        return jsonify({'error': 'Invalid file type'}), 400
+
+    # --- Use mkstemp for Windows compatibility ---
+    fd, temp_path = tempfile.mkstemp(suffix='.jpg')
+    os.close(fd)  # Close immediately to release the lock
+
+    try:
+        file.save(temp_path)
+        prediction = predict_image(temp_path)
+    finally:
+        os.remove(temp_path)  # Clean up manually
+
+    return jsonify({'message': 'Image received', 'prediction': prediction})
+
 @app.route('/health')
 def health():
     """Simple health check"""
@@ -69,4 +106,3 @@ if __name__ == '__main__':
     print("Make sure to set GEMINI_API_KEY environment variable")
     print("Usage: POST to /recommend with {'skin_disease': 'acne'}")
     app.run(debug=True, host='0.0.0.0', port=5000)
-    app.run(debug=True, host='0.0.0.0', port=4000)

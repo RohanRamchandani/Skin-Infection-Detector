@@ -89,5 +89,4 @@ def get_skin_disease_recommendations(skin_disease, allergies):
     except Exception as e:
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
-        return {"error": str(e)}
     
