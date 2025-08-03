@@ -1,8 +1,6 @@
 import google.generativeai as genai
 import json
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import logging
 from dotenv import load_dotenv
 
@@ -10,9 +8,6 @@ load_dotenv()
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-CORS(app)
 
 # Configuration - Set your Gemini API key as environment variable
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
@@ -22,7 +17,6 @@ if not GEMINI_API_KEY:
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
-
 
 def get_skin_disease_recommendations(skin_disease, allergies):
     """
@@ -94,4 +88,3 @@ def get_skin_disease_recommendations(skin_disease, allergies):
     except Exception as e:
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
-    
