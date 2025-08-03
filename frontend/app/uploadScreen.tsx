@@ -21,7 +21,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   const [image, setImage] = useState<string | null>(null);
   // State to manage the analysis process UI
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+  // Removed analysisResult state as it will be passed to resultsScreen
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -35,8 +35,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImage(result.assets[0].uri);
-      // Clear previous results when a new image is selected
-      setAnalysisResult(null);
+      // Clear previous error when a new image is selected
       setError(null);
     }
   };
@@ -50,8 +49,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImage(result.assets[0].uri);
-      // Clear previous results when a new image is selected
-      setAnalysisResult(null);
+      // Clear previous error when a new image is selected
       setError(null);
     }
   };
@@ -124,7 +122,6 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
 
     setIsAnalyzing(true);
     setError(null);
-    setAnalysisResult(null);
 
     try {
       // Step 1: Upload the image to get a task ID
@@ -138,9 +135,9 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
       // Step 2: Poll for the result using the task ID
       const result = await pollForResult(uploadResponse.task_id);
       router.push({
-        pathname: 'resultsScreen',
+        pathname: '/resultsScreen',
         params: {result: JSON.stringify(result)},
-      }); // Set the final result to the state
+      });
     } catch (e: any) {
       setError(e.message || 'An unknown error occurred.');
     } finally {
@@ -231,7 +228,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
           </View>
         </View>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={handleAnalyzePress}
           style={[styles.analyzeButton, isAnalyzing && styles.disabledButton]}
           disabled={isAnalyzing}
@@ -241,22 +238,17 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
               <ActivityIndicator size="small" color="#38bdf8" />
               <Text style={styles.analyzeButtonText}>Analyzing...</Text>
             </>
-          ) : (
-            <Text style={styles.analyzeButtonText}>Analyze Image</Text>
-          )}
-        </TouchableOpacity>
+          ) : ( */}
+          <TouchableOpacity 
+          onPress={() => router.push('/resultsScreen')}
+          style={[styles.analyzeButton, isAnalyzing && styles.disabledButton]}><Text style={styles.analyzeButtonText}>Analyze Image</Text></TouchableOpacity>
+            
+        {/* //   )} */}
+        {/* // </TouchableOpacity> */}
 
         {error && (
           <View style={styles.resultBox}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-        {analysisResult && (
-          <View style={styles.resultBox}>
-            <Text style={styles.resultTitle}>Analysis Result:</Text>
-            <Text style={styles.resultText}>
-              {JSON.stringify(analysisResult, null, 2)}
-            </Text>
           </View>
         )}
       </View>

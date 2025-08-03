@@ -18,7 +18,7 @@ export default function RootLayout() {
         }} 
       />
       <Stack.Screen
-        name="resultScreen"
+        name="resultsScreen"
         options={{
           headerShown: false,
           title: 'Results',
