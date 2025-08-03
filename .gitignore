@@ -1,4 +1,4 @@
-
+.env
 __pycache__/
 *.py[cod]
 *.pyo
@@ -6,7 +6,7 @@ __pycache__/
 .Python
 env/
 .venv
-venv/
+venv
 ENV/
 *.egg-info/
 dist/

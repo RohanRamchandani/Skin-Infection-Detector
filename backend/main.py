@@ -4,6 +4,7 @@ import logging
 from AiAnalyzer import get_skin_disease_recommendations
 
 print(get_skin_disease_recommendations("eczema", "None"))
+print(get_skin_disease_recommendations("Eczema", "none"))
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +37,18 @@ def recommend():
         if not skin_disease :
             return jsonify({'error': 'skin_disease cannot be empty'}), 400
         
+        if not data or 'skin_disease' not in data:
+            return jsonify({'error': 'Please provide skin_disease in request body'}), 400
+        
+        skin_disease = data['skin_disease'].strip()
+        allergies = data['allergies'].strip()
+
+        if not skin_disease:
+            return jsonify({'error': 'skin_disease cannot be empty'}), 400
+        
+        if not allergies: 
+            return jsonify({'error': 'allergies cannot be empty'}), 400
+
         # Get recommendations from Gemini
         logger.info(f"Getting recommendations for: {skin_disease}")
         recommendations = get_skin_disease_recommendations(skin_disease, allergies)
@@ -56,3 +69,4 @@ if __name__ == '__main__':
     print("Make sure to set GEMINI_API_KEY environment variable")
     print("Usage: POST to /recommend with {'skin_disease': 'acne'}")
     app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=4000)

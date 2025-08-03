@@ -18,6 +18,7 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+
 def get_skin_disease_recommendations(skin_disease, allergies):
     """
     Simple function to prompt Gemini AI for skin disease recommendations based on severity and allergies
@@ -88,3 +89,5 @@ def get_skin_disease_recommendations(skin_disease, allergies):
     except Exception as e:
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
+        return {"error": str(e)}
+    
