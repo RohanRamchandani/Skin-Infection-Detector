@@ -17,6 +17,13 @@ export default function RootLayout() {
           title: 'Upload Image' 
         }} 
       />
+      <Stack.Screen
+        name="resultScreen"
+        options={{
+          headerShown: false,
+          title: 'Results',
+        }}
+        />
     </Stack>
   );
 }

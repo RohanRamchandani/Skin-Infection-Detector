@@ -56,5 +56,3 @@ def predict_image(image_path):
         "confidence": confidence,
         "class_probabilities": class_probs
     }
-
-
