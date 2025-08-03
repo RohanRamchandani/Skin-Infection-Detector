@@ -21,6 +21,18 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     }
   };
 
+  const takePhoto = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
   return (
     <ScrollView>
     <View style={styles.container}>
@@ -60,12 +72,22 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         
         <Text style={styles.supportText}>Supports JPG, PNG, and other image formats</Text>
         
+              <View style={{ flexDirection: 'row', gap: 12 }}>
         <TouchableOpacity 
           style={styles.uploadButton}
           onPress={pickImage}
         >
           <Text style={styles.uploadButtonText}>Choose File</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.uploadButton, { backgroundColor: '#10b981' }]}
+          onPress={takePhoto}
+        >
+          <Text style={styles.uploadButtonText}>Open Camera</Text>
+        </TouchableOpacity>
+      </View>
+
       </View>
 
       <View style={styles.guidelines}>
