@@ -1,3 +1,6 @@
+
+from flask import Flask, request, jsonify
+
 import google.generativeai as genai
 import json
 import os
@@ -18,7 +21,6 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-
 def get_skin_disease_recommendations(skin_disease, allergies):
     """
     Simple function to prompt Gemini AI for skin disease recommendations based on severity and allergies
@@ -28,7 +30,6 @@ def get_skin_disease_recommendations(skin_disease, allergies):
     allergy_info = (
         f"\nThe user has the following allergies: {', '.join(allergies)}.\n"
         "Please avoid recommending any supplements or foods that may trigger these allergies."
-
         if allergies else ""
     )
 
@@ -82,11 +83,11 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         recommendations = json.loads(response_text)
         
         return recommendations
-        
+
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse JSON: {e}")
         return {"error": "Failed to parse AI response"}
     except Exception as e:
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
-    
+

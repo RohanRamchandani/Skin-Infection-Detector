@@ -39,17 +39,24 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   };
 
   const takePhoto = async () => {
-    let result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    setError('Camera access is required to take photos.');
+    return;
+  }
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
-      setError(null);
-    }
-  };
+  let result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 1,
+  });
+
+  if (!result.canceled && result.assets && result.assets.length > 0) {
+    setImage(result.assets[0].uri);
+    setError(null);
+  }
+};
+
 
   const uploadImage = async (imageUri: string) => {
     try {
@@ -94,7 +101,13 @@ const getResultAfterDelay = async (statusUrl: string) => {
 
     if (data.status === 'completed') {
       console.log('Analysis complete:', data.prediction);
-      return data.prediction;
+      return {
+  diagnosis: data.prediction,
+  confidence: data.confidence,
+  full_output: data.full_output,
+};
+
+
     } else if (data.status === 'failed') {
       throw new Error(data.error || 'Analysis failed on the server.');
     } else {
@@ -127,13 +140,41 @@ const handleAnalyzePress = async () => {
     console.log(`Upload successful. Status URL: ${uploadResponse.status_url}`);
 
     // 2️⃣ Wait & then GET the result
-    const result = await getResultAfterDelay(uploadResponse.status_url);
+    const fetchRecommendations = async (skin_disease: string, allergies: string[]) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/recommend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        skin_disease,
+        allergies,
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    console.error('Recommendation fetch error:', e);
+    return { error: 'Failed to get recommendations' };
+  }
+};
+
+      const result = await getResultAfterDelay(uploadResponse.status_url);
+const allergyList = allergyInput.split(',').map(a => a.trim()).filter(Boolean);
+const recommendations = await fetchRecommendations(result.diagnosis, allergyList);
+
     console.log('Analysis result:', JSON.stringify(result));
     // ✅ Navigate to results screen
-    router.push({
-      pathname: 'resultsScreen',
-      params: { result: JSON.stringify(result) },
-    });
+router.push({
+  pathname: 'resultsScreen',
+  params: {
+    result: JSON.stringify(result),
+    allergies: allergyInput,  // ✅ add this
+  },
+});
+
+
+
 
   } catch (e: any) {
     setError(e.message || 'An unknown error occurred.');

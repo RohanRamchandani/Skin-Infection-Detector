@@ -17,6 +17,7 @@ CLASS_LABELS = {
 }
 
 # --- Load model once globally (efficient for server use) ---
+
 MODEL_PATH = 'model_final_epoch-mnetv1.keras'
 IMG_SIZE = (224, 224)
 model = tf.keras.models.load_model(MODEL_PATH)

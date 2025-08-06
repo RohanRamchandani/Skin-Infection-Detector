@@ -37,31 +37,31 @@ def recommend():
     """
     try:
         data = request.get_json()
-        if not data or 'skin_disease' not in data:
-            return jsonify({'error': 'Please provide skin_disease in request body'}), 400
+        if not data or 'skin_disease' not in data or 'allergies' not in data:
+            return jsonify({'error': 'Please provide skin_disease and allergies in request body'}), 400
 
         skin_disease = data['skin_disease']
-        allergies = data.get('allergies', None)
+        allergies = data['allergies']
+
+
 
         if not isinstance(skin_disease, str) or not skin_disease.strip():
             return jsonify({'error': 'skin_disease cannot be empty'}), 400
 
-        # Normalize allergies if provided
-        if allergies is not None:
-            if isinstance(allergies, str):
-                allergies = allergies.strip()
-                if not allergies:
-                    allergies = None
-            elif isinstance(allergies, list):
-                if not allergies:
-                    allergies = None
-            else:
-                return jsonify({'error': 'allergies must be a string or list if provided'}), 400
+        # If allergies is a string, strip it; if it's a list, keep as is
+        if isinstance(allergies, str):
+            allergies = allergies.strip()
+            if not allergies:
+                return jsonify({'error': 'allergies cannot be empty'}), 400
+        elif isinstance(allergies, list):
+            if not allergies:
+                return jsonify({'error': 'allergies cannot be empty'}), 400
+        else:
+            return jsonify({'error': 'allergies must be a string or list'}), 400
 
-        logger.info(f"Getting recommendations for: {skin_disease} with allergies: {allergies}")
+        logger.info(f"Getting recommendations for: {skin_disease}")
         recommendations = get_skin_disease_recommendations(skin_disease, allergies)
         return jsonify(recommendations)
-
     except Exception as e:
         logger.error(f"Error in recommend endpoint: {e}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -72,7 +72,13 @@ def process_image_in_background(task_id, temp_path):
     logger.info(f"Task {task_id}: Starting prediction in background...")
     try:
         prediction = predict_image(temp_path)
-        task_results[task_id] = {'status': 'completed', 'prediction': prediction}
+        logger.info(f"Task {task_id}: Prediction result: {prediction}")  # ✅ Log the actual prediction
+        task_results[task_id] = { 'status': 'completed',
+    'prediction': prediction.get("predicted_class", "unknown"),  # ✅ direct diagnosis string
+    'confidence': prediction.get("confidence", 0.0),
+    'full_output': prediction  # optional: keep full dict if needed later
+    }
+
         logger.info(f"Task {task_id}: Prediction complete.")
     except Exception as e:
         task_results[task_id] = {'status': 'failed', 'error': str(e)}

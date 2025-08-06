@@ -32,7 +32,11 @@ export default function ResultsScreen() {
 
   // Extract skin condition from the image analysis result
   // This will be the dynamic skin disease used for AI prompting
-  const skinConditionFromImage = parsedImageAnalysisResult?.skinCondition || 'Unknown';
+
+  const skinConditionFromImage =
+  typeof parsedImageAnalysisResult?.diagnosis === 'string'
+    ? parsedImageAnalysisResult.diagnosis
+    : parsedImageAnalysisResult?.diagnosis?.predicted_class || 'Unknown';
 
   // Parse allergies from the navigation parameter
   const parsedAllergies = allergies
