@@ -43,6 +43,8 @@ def recommend():
         skin_disease = data['skin_disease']
         allergies = data['allergies']
 
+
+
         if not isinstance(skin_disease, str) or not skin_disease.strip():
             return jsonify({'error': 'skin_disease cannot be empty'}), 400
 
@@ -68,7 +70,6 @@ def process_image_in_background(task_id, temp_path):
     """Function to run the AI model in a separate thread."""
     logger = logging.getLogger(__name__)
     logger.info(f"Task {task_id}: Starting prediction in background...")
-
     try:
         prediction = predict_image(temp_path)
         logger.info(f"Task {task_id}: Prediction result: {prediction}")  # ✅ Log the actual prediction
@@ -77,6 +78,7 @@ def process_image_in_background(task_id, temp_path):
     'confidence': prediction.get("confidence", 0.0),
     'full_output': prediction  # optional: keep full dict if needed later
     }
+
         logger.info(f"Task {task_id}: Prediction complete.")
     except Exception as e:
         task_results[task_id] = {'status': 'failed', 'error': str(e)}

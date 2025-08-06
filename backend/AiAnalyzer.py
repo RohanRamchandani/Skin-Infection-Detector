@@ -1,4 +1,6 @@
+
 from flask import Flask, request, jsonify
+
 import google.generativeai as genai
 import json
 import os
@@ -6,19 +8,25 @@ import logging
 from dotenv import load_dotenv
 
 load_dotenv()
+# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Configuration - Set your Gemini API key as environment variable
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if not GEMINI_API_KEY:
     raise ValueError("Please set GEMINI_API_KEY environment variable")
 
+# Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-app = Flask(__name__)
-
 def get_skin_disease_recommendations(skin_disease, allergies):
+    """
+    Simple function to prompt Gemini AI for skin disease recommendations based on severity and allergies
+    """
+    
+    # Create a simple, focused prompt
     allergy_info = (
         f"\nThe user has the following allergies: {', '.join(allergies)}.\n"
         "Please avoid recommending any supplements or foods that may trigger these allergies."
@@ -59,17 +67,21 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         
         Focus on evidence-based recommendations. Include 3-5 supplements and 5-7 healthy foods.
     """
+    
     try:
+        # Send prompt to Gemini
         response = model.generate_content(prompt)
         response_text = response.text.strip()
-
+        
+        # Clean up response if it has markdown formatting
         if response_text.startswith('```json'):
             response_text = response_text[7:]
         if response_text.endswith('```'):
             response_text = response_text[:-3]
-
+        
+        # Parse JSON response
         recommendations = json.loads(response_text)
-
+        
         return recommendations
 
     except json.JSONDecodeError as e:
@@ -79,19 +91,3 @@ def get_skin_disease_recommendations(skin_disease, allergies):
         logger.error(f"Error getting recommendations: {e}")
         return {"error": str(e)}
 
-
-@app.route('/recommend', methods=['POST'])
-def recommendations():
-    data = request.get_json()
-    skin_disease = data.get('skin_disease')
-    allergies = data.get('allergies', [])
-
-    if not skin_disease:
-        return jsonify({"error": "skin_disease is required"}), 400
-
-    result = get_skin_disease_recommendations(skin_disease, allergies)
-    return jsonify(result)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)

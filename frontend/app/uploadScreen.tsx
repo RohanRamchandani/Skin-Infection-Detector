@@ -57,6 +57,7 @@ const UploadScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
   }
 };
 
+
   const uploadImage = async (imageUri: string) => {
     try {
       const filename = imageUri.split('/').pop() || `image-${Date.now()}.jpg`;
@@ -106,6 +107,7 @@ const getResultAfterDelay = async (statusUrl: string) => {
   full_output: data.full_output,
 };
 
+
     } else if (data.status === 'failed') {
       throw new Error(data.error || 'Analysis failed on the server.');
     } else {
@@ -138,9 +140,6 @@ const handleAnalyzePress = async () => {
     console.log(`Upload successful. Status URL: ${uploadResponse.status_url}`);
 
     // 2️⃣ Wait & then GET the result
-
-
-
     const fetchRecommendations = async (skin_disease: string, allergies: string[]) => {
   try {
     const response = await fetch(`${API_BASE_URL}/recommend`, {
@@ -173,6 +172,7 @@ router.push({
     allergies: allergyInput,  // ✅ add this
   },
 });
+
 
 
 
