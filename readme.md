@@ -19,5 +19,5 @@ DermaDetect is a full-stack AI application designed to provide preliminary analy
 
 🛠️ Project Impact
 
-Optimized Performance: Improved classification through rigorous preprocessing, experimentation, and dataset balancing.
-End-to-End Integration: Successfully bridged the gap between a complex ML model and a user-friendly interface, managing the full data pipeline from upload to inference.
+1. Optimized Performance: Improved classification through rigorous preprocessing, experimentation, and dataset balancing.
+2. End-to-End Integration: Successfully bridged the gap between a complex ML model and a user-friendly interface, managing the full data pipeline from upload to inference.
