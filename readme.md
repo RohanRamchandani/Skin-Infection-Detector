@@ -1,8 +1,8 @@
-# 🧠 AI Skin Infection Detector
+🧠 AI Skin Infection Detector
 
 An AI-powered web app that detects skin infections from images using deep learning and recommends supplements for treatment and care.
 
-## 🚀 Features
+🚀 Features
 
 - Detects common skin diseases from images
 - Trained on a custom dataset with balanced classes
@@ -11,9 +11,9 @@ An AI-powered web app that detects skin infections from images using deep learni
 - Web-friendly interface for image uploads and results
 - Includes user safety disclaimer and ethical data handling
 
-## 🏗️ Tech Stack
+🏗️ Tech Stack
 
 - **Backend:** Python, TensorFlow/Keras, Flask or FastAPI
-- **Frontend:** React or Streamlit (optional)
+- **Frontend:** React
 - **Model:** CNN (e.g., EfficientNet, MobileNet)
 - **Tools:** Docker, Git, GitHub Actions, VS Code 
