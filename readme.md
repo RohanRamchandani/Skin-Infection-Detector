@@ -12,10 +12,10 @@ DermaDetect is a full-stack AI application designed to provide preliminary analy
 
 🏗️ Technical Stack
 
-Frontend: React, React Native (Mobile)
-Backend: Python, Flask, TensorFlow/Keras
-Deep Learning: CNNs, EfficientNet, ResNet
-DevOps & Tools: Docker, Git, GitHub Actions, VS Code
+1. Frontend: React, React Native (Mobile)
+2. Backend: Python, Flask, TensorFlow/Keras
+3. Deep Learning: CNNs, EfficientNet, ResNet
+4. DevOps & Tools: Docker, Git, GitHub Actions, VS Code
 
 🛠️ Project Impact
 
